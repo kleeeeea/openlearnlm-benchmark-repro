@@ -44,9 +44,12 @@ class EvalConfig:
     OPENAI_API_KEY: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
     OPENROUTER_API_KEY: str = field(default_factory=lambda: os.getenv("OPENROUTER_API_KEY", ""))
 
-    # API URLs
-    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    # API URLs (overridable via env vars)
+    OPENAI_BASE_URL: str = field(default_factory=lambda: os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"))
+    OPENROUTER_BASE_URL: str = field(default_factory=lambda: os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
+
+    # LLM-as-Judge model (overridable via env var; must be available on OPENROUTER_BASE_URL)
+    JUDGE_MODEL: str = field(default_factory=lambda: os.getenv("JUDGE_MODEL", "openai/gpt-4o-mini"))
 
     # Models to evaluate
     MODELS: List[str] = field(default_factory=lambda: [
@@ -79,35 +82,48 @@ class EvalConfig:
     CHECKPOINT_INTERVAL: int = 100  # items per checkpoint
 
     # File Paths
-    PROJECT_ROOT: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent.parent)
+    PROJECT_ROOT: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent)
 
     # Benchmark category (for folder structure)
     BENCHMARK_CATEGORY: str = "01_기능_skills"
 
+    # Map CLI category names to actual data folder names
+    _CATEGORY_FOLDER: dict = field(default_factory=lambda: {
+        "01_기능_skills": "skills",
+        "02_교과지식_content": "content_knowledge",
+        "03_교육학지식_pedagogical": "pedagogical_knowledge",
+        "04_태도_attitude": "attitude",
+    })
+
+    @property
+    def CATEGORY_FOLDER(self) -> str:
+        return self._CATEGORY_FOLDER.get(self.BENCHMARK_CATEGORY, self.BENCHMARK_CATEGORY)
+
     @property
     def BENCHMARK_DATA_DIR(self) -> Path:
         """Benchmark data directory"""
-        return self.PROJECT_ROOT / "3. Benchmark Prototype" / "benchmark_data"
+        return self.PROJECT_ROOT / "data"
 
     @property
     def TEST_DATA_FILE(self) -> Path:
-        """Path to the test dataset (5% of total data)"""
-        return self.BENCHMARK_DATA_DIR / self.BENCHMARK_CATEGORY / "questions_test.jsonl"
+        """Path to the test dataset"""
+        return self.BENCHMARK_DATA_DIR / self.CATEGORY_FOLDER / "questions_test.jsonl"
+
+    @property
+    def OUTPUTS_DIR(self) -> Path:
+        return self.PROJECT_ROOT / "outputs"
 
     @property
     def LOGS_DIR(self) -> Path:
-        """Logs directory"""
-        return self.PROJECT_ROOT / "3. Benchmark Prototype" / "evaluation_logs"
+        return self.OUTPUTS_DIR / "logs"
 
     @property
     def RESPONSES_DIR(self) -> Path:
-        """Model responses directory"""
-        return self.PROJECT_ROOT / "3. Benchmark Prototype" / "evaluation_responses" / self.BENCHMARK_CATEGORY
+        return self.OUTPUTS_DIR / "responses" / self.BENCHMARK_CATEGORY
 
     @property
     def REPORTS_DIR(self) -> Path:
-        """Reports directory"""
-        return self.PROJECT_ROOT / "3. Benchmark Prototype" / "evaluation_reports"
+        return self.OUTPUTS_DIR / "reports"
 
     # OpenRouter specific
     SITE_URL: str = "XXXX-1"
@@ -115,7 +131,6 @@ class EvalConfig:
 
     def __post_init__(self):
         # Ensure output directories exist
-        self.BENCHMARK_DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.LOGS_DIR.mkdir(parents=True, exist_ok=True)
         self.RESPONSES_DIR.mkdir(parents=True, exist_ok=True)
         self.REPORTS_DIR.mkdir(parents=True, exist_ok=True)

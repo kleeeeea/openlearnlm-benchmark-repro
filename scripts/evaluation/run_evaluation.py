@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument(
         "--limit",
         type=int,
-        default=None,
+        default=2,
         help="Limit number of items to evaluate"
     )
 
@@ -117,17 +117,8 @@ def main():
         config.RESPONSES_DIR.mkdir(parents=True, exist_ok=True)
 
     if args.models:
-        # Validate model IDs
-        valid_models = []
-        for model in args.models:
-            if model in config.MODELS or "/" in model:
-                valid_models.append(model)
-            else:
-                print(f"Warning: Unknown model '{model}', skipping")
-
-        if valid_models:
-            config.MODELS = valid_models
-        else:
+        config.MODELS = [m for m in args.models if m]
+        if not config.MODELS:
             print("Error: No valid models specified")
             return 1
 

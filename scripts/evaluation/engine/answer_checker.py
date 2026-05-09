@@ -129,7 +129,7 @@ class AnswerChecker:
             }
 
             payload = {
-                "model": "openai/gpt-4o-mini",  # Fast and cheap for judging
+                "model": self.config.JUDGE_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.0,
                 "max_tokens": 300,
