@@ -34,7 +34,7 @@ print(f"Model   : {CUSTOM_MODEL}")
 os.chdir(SCRIPT_DIR / "scripts")
 sys.path.insert(0, str(SCRIPT_DIR / "scripts"))
 
-sys.argv = ["run_evaluation.py", "--models", CUSTOM_MODEL, '--no-resume', '--workers', '1'] + sys.argv[1:]
+sys.argv = ["run_evaluation.py", "--models", CUSTOM_MODEL, '--no-resume', '--workers', '1', '--report-only'] + sys.argv[1:]
 
 from evaluation.engine.orchestrator import EvaluationOrchestrator  # noqa: F401 — trigger path setup
 import runpy
