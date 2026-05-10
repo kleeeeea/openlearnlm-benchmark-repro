@@ -66,7 +66,7 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--report_only",
+        "--report-only",
         action="store_true",
         help="Generate report from existing results without running evaluation"
     )

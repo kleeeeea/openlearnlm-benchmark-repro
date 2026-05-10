@@ -4,6 +4,8 @@ import threading
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 
+from cfgv import check_regex
+
 from ..config import EvalConfig
 from ..api.base_client import BaseModelClient, EvaluationRequest, EvaluationResponse
 from ..api.openai_client import OpenAIDirectClient
@@ -137,20 +139,21 @@ class ModelEvaluator:
             usage=response.usage
         )
 
+        check_RESULT_FIELD = "check_result"
         return {
-            "item_id": request.item_id,
-            "model": self.model_id,
-            "success": True,
-            "question": request.question[:200] + "..." if len(request.question) > 200 else request.question,
-            "expected_answer": request.expected_answer,
-            "model_answer": response.model_answer,
-            "raw_content": response.raw_content,
+            "item_id"         : request.item_id,
+            "model"           : self.model_id,
+            "success"         : True,
+            "question"        : request.question[:200] + "..." if len(request.question) > 200 else request.question,
+            "expected_answer" : request.expected_answer,
+            "model_answer"    : response.model_answer,
+            "raw_content"     : response.raw_content,
             "thinking_content": response.thinking_content,
-            "is_correct": check_result["is_correct"],
-            "check_result": check_result,
-            "latency_ms": response.latency_ms,
-            "usage": response.usage,
-            "metadata": request.metadata,
+            "is_correct"      : check_result["is_correct"],
+            check_RESULT_FIELD            : check_result,
+            "latency_ms"      : response.latency_ms,
+            "usage"           : response.usage,
+            "metadata"        : request.metadata,
         }
 
     def get_stats(self) -> Dict[str, Any]:
