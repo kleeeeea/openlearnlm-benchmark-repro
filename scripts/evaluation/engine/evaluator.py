@@ -12,6 +12,8 @@ from ..api.openai_client import OpenAIDirectClient
 from ..api.openrouter_client import OpenRouterClient
 from .answer_checker import AnswerChecker
 
+CHECK_RESULT_FIELD = "check_result"
+
 
 @dataclass
 class EvaluatorStats:
@@ -58,13 +60,13 @@ class EvaluatorStats:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
-            "processed": self.processed,
-            "correct": self.correct,
-            "failed": self.failed,
-            "accuracy": round(self.accuracy, 4),
-            "avg_latency_ms": round(self.avg_latency_ms, 2),
-            "total_prompt_tokens": self.total_prompt_tokens,
-            "total_completion_tokens": self.total_completion_tokens,
+                "processed"              : self.processed,
+                "correct"                : self.correct,
+                "failed"                 : self.failed,
+                "accuracy"               : round(self.accuracy, 4),
+                "avg_latency_ms"         : round(self.avg_latency_ms, 2),
+                "total_prompt_tokens"    : self.total_prompt_tokens,
+                "total_completion_tokens": self.total_completion_tokens,
         }
 
 
@@ -99,12 +101,12 @@ class ModelEvaluator:
         """
         # Build evaluation request
         request = EvaluationRequest(
-            item_id=item.get("item_id", 0),
-            question=item.get("question", ""),
-            expected_answer=item.get("answer", ""),
-            question_type=item.get("metadata", {}).get("question_type", "multiple_choice"),
-            metadata=item.get("metadata", {}),
-            options=item.get("options")  # MCQ options (A, B, C, D)
+                item_id=item.get("item_id", 0),
+                question=item.get("question", ""),
+                expected_answer=item.get("answer", ""),
+                question_type=item.get("metadata", {}).get("question_type", "multiple_choice"),
+                metadata=item.get("metadata", {}),
+                options=item.get("options")  # MCQ options (A, B, C, D)
         )
 
         # Call model API
@@ -113,52 +115,51 @@ class ModelEvaluator:
         if not response.success:
             self.stats.record_failure()
             return {
-                "item_id": request.item_id,
-                "model": self.model_id,
-                "success": False,
-                "error": response.error,
-                "latency_ms": response.latency_ms,
-                "metadata": request.metadata,
+                    "item_id"   : request.item_id,
+                    "model"     : self.model_id,
+                    "success"   : False,
+                    "error"     : response.error,
+                    "latency_ms": response.latency_ms,
+                    "metadata"  : request.metadata,
             }
 
         # Check answer (LLM-as-Judge for long answers with scenario-specific rubric)
         scenario = request.metadata.get("scenario", "")
         check_result = self.checker.check_answer(
-            model_answer=response.model_answer,
-            expected_answer=request.expected_answer,
-            question_type=request.question_type,
-            question=request.question,
-            scenario=scenario,
-            metadata=request.metadata  # Pass metadata for attitude evaluation
+                model_answer=response.model_answer,
+                expected_answer=request.expected_answer,
+                question_type=request.question_type,
+                question=request.question,
+                scenario=scenario,
+                metadata=request.metadata  # Pass metadata for attitude evaluation
         )
 
         # Record statistics
         self.stats.record(
-            is_correct=check_result["is_correct"],
-            latency_ms=response.latency_ms,
-            usage=response.usage
+                is_correct=check_result["is_correct"],
+                latency_ms=response.latency_ms,
+                usage=response.usage
         )
 
-        check_RESULT_FIELD = "check_result"
         return {
-            "item_id"         : request.item_id,
-            "model"           : self.model_id,
-            "success"         : True,
-            "question"        : request.question[:200] + "..." if len(request.question) > 200 else request.question,
-            "expected_answer" : request.expected_answer,
-            "model_answer"    : response.model_answer,
-            "raw_content"     : response.raw_content,
-            "thinking_content": response.thinking_content,
-            "is_correct"      : check_result["is_correct"],
-            check_RESULT_FIELD            : check_result,
-            "latency_ms"      : response.latency_ms,
-            "usage"           : response.usage,
-            "metadata"        : request.metadata,
+                "item_id"         : request.item_id,
+                "model"           : self.model_id,
+                "success"         : True,
+                "question"        : request.question[:200] + "..." if len(request.question) > 200 else request.question,
+                "expected_answer" : request.expected_answer,
+                "model_answer"    : response.model_answer,
+                "raw_content"     : response.raw_content,
+                "thinking_content": response.thinking_content,
+                "is_correct"      : check_result["is_correct"],
+                CHECK_RESULT_FIELD: check_result,
+                "latency_ms"      : response.latency_ms,
+                "usage"           : response.usage,
+                "metadata"        : request.metadata,
         }
 
     def get_stats(self) -> Dict[str, Any]:
         """Get current evaluation statistics"""
         return {
-            "model": self.model_id,
-            **self.stats.to_dict()
+                "model": self.model_id,
+                **self.stats.to_dict()
         }

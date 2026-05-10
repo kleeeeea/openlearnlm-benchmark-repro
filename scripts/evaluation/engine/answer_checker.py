@@ -16,6 +16,7 @@ from typing import Tuple, Optional
 from ..config import EvalConfig
 from .rubric_loader import get_rubric_loader
 
+SCORE_FIELD = "score"
 
 class AnswerChecker:
     """Check if model's answer matches the expected answer"""
@@ -439,12 +440,12 @@ Evaluation Dimension: {dimension}
                 question, model_answer, metadata
             )
             return {
-                "is_correct": is_correct,
-                "score": score,
-                "reasoning": reasoning,
-                "rubric_source": rubric_source,
-                "check_type": "attitude_judge",
-                "dimension": metadata.get("dimension", ""),
+                "is_correct"       : is_correct,
+                SCORE_FIELD                  : score,
+                "reasoning"        : reasoning,
+                "rubric_source"    : rubric_source,
+                "check_type"       : "attitude_judge",
+                "dimension"        : metadata.get("dimension", ""),
                 "attitude_category": metadata.get("attitude_category", "")
             }
         else:
@@ -452,9 +453,9 @@ Evaluation Dimension: {dimension}
                 question, model_answer, expected_answer, scenario
             )
             return {
-                "is_correct": is_correct,
-                "score": score,  # 1-10 scale
-                "reasoning": reasoning,
+                "is_correct"   : is_correct,
+                SCORE_FIELD              : score,  # 1-10 scale
+                "reasoning"    : reasoning,
                 "rubric_source": rubric_source,
-                "check_type": "llm_judge"
+                "check_type"   : "llm_judge"
             }

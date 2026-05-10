@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-05-10 21:02:55",
+  "responses_dir": "/Users/l/klee_code/git_repos/openlearnlm-benchmark-17D4/outputs/responses/01_기능_skills",
+  "models": {
+    "gemini-2.0-flash": {
+      "total": 3,
+      "score": 7.666666666666667,
+      "successful": 3,
+      "failed": 0,
+      "correct": 3,
+      "accuracy": 1.0,
+      "avg_latency_ms": 28993.3,
+      "total_prompt_tokens": 495,
+      "total_completion_tokens": 1432
+    }
+  }
+}
