@@ -3,9 +3,9 @@
 Python driver for the OpenLearnLM benchmark.
 
 Mirrors run.sh — override defaults with environment variables:
-  CUSTOM_API_URL   base URL of the API        (default: innospark endpoint)
-  CUSTOM_API_KEY   bearer token               (default: bundled test key)
-  CUSTOM_MODEL     model name to test         (default: gemini-2.0-flash)
+  CUSTOM_API_URL   base URL of the API        (default: production endpoint)
+  CUSTOM_API_KEY   bearer token               (default: production test key)
+  CUSTOM_MODEL     model name to test         (default: Qwen3-4B-Instruct-2507)
   JUDGE_MODEL      model used for LLM scoring (default: same as CUSTOM_MODEL)
 
 Any extra arguments are forwarded to run_evaluation.py.
@@ -17,9 +17,24 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
-CUSTOM_API_URL = os.environ.get("CUSTOM_API_URL", "https://api.innospark.cn/v1")
-CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY", "sk-yJdHSUrrZNYkBS5f5dHOPgoxRw5Q8qRJPFTbKh6jOqnAUZNF")
-CUSTOM_MODEL   = os.environ.get("CUSTOM_MODEL",   "gemini-2.0-flash")
+SAMPLE_PROD_CURL = '''
+curl -sS --fail -X POST "https://e8p5ocom8hcgcecckoc8jbhhohqhahhg.openapi-qb.sii.edu.cn/v1/chat/completions" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer QF8XqjmZhi9sygq1MT9Nr0rk8xZzVlid/aLvCRurzWw=" \
+    -d '{
+      "model": "Qwen3-4B-Instruct-2507",
+      "messages": [
+        { "role": "user", "content": "hi" }
+      ]
+    }'
+ '''
+DEFAULT_API_URL = "https://e8p5ocom8hcgcecckoc8jbhhohqhahhg.openapi-qb.sii.edu.cn/v1"
+DEFAULT_API_KEY = "QF8XqjmZhi9sygq1MT9Nr0rk8xZzVlid/aLvCRurzWw="
+DEFAULT_MODEL = "Qwen3-4B-Instruct-2507"
+
+CUSTOM_API_URL = os.environ.get("CUSTOM_API_URL", DEFAULT_API_URL)
+CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY", DEFAULT_API_KEY)
+CUSTOM_MODEL   = os.environ.get("CUSTOM_MODEL",   DEFAULT_MODEL)
 JUDGE_MODEL    = os.environ.get("JUDGE_MODEL",    CUSTOM_MODEL)
 
 os.environ["OPENAI_BASE_URL"]     = CUSTOM_API_URL
@@ -34,7 +49,7 @@ print(f"Model   : {CUSTOM_MODEL}")
 os.chdir(SCRIPT_DIR / "scripts")
 sys.path.insert(0, str(SCRIPT_DIR / "scripts"))
 
-sys.argv = ["run_evaluation.py", "--models", CUSTOM_MODEL, '--no-resume', '--workers', '1', '--report-only'] + sys.argv[1:]
+sys.argv = ["run_evaluation.py", "--models", CUSTOM_MODEL, "--workers", "1"] + sys.argv[1:]
 
 from evaluation.engine.orchestrator import EvaluationOrchestrator  # noqa: F401 — trigger path setup
 import runpy
