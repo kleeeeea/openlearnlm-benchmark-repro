@@ -71,14 +71,14 @@ DEFAULT_BASELINE_API = ApiConfig(
 GEMINI_API = ApiConfig(
     base_url="https://api.innospark.cn/v1",
     api_key="sk-yJdHSUrrZNYkBS5f5dHOPgoxRw5Q8qRJPFTbKh6jOqnAUZNF",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
 )
-DEFAULT_JUDGE_API = ApiConfig(
-    base_url="https://ea5maamppajpchmpmqk5obbpemep5p5k.openapi-qb.sii.edu.cn/v1",
-    api_key="QF8XqjmZhi9sygq1MT9Nr0rk8xZzVlid/aLvCRurzWw=",
-    model="Qwen3.6-27B",
-)
-
+DEFAULT_JUDGE_API = GEMINI_API
+# ApiConfig(
+#     base_url="https://ea5maamppajpchmpmqk5obbpemep5p5k.openapi-qb.sii.edu.cn/v1",
+#     api_key="QF8XqjmZhi9sygq1MT9Nr0rk8xZzVlid/aLvCRurzWw=",
+#     model="Qwen3.6-27B",
+# )
 
 
 EVAL_API = DEFAULT_EVAL_API
@@ -105,8 +105,8 @@ print(f"Judge Model   : {JUDGE_API.model}")
 
 os.chdir(SCRIPT_DIR / "scripts")
 sys.path.insert(0, str(SCRIPT_DIR / "scripts"))
-# , '--limit', '1'
-sys.argv = ["run_evaluation.py", "--models", EVAL_API.model, "--workers", str(4)] + ["--no-resume"] + sys.argv[1:]
+#
+sys.argv = ["run_evaluation.py", "--models", EVAL_API.model, "--workers", str(2), '--limit', '12'] + ["--no-resume"] + sys.argv[1:]
 
 from evaluation.engine.orchestrator import EvaluationOrchestrator  # noqa: F401 — trigger path setup
 import runpy

@@ -23,7 +23,7 @@ class EvaluationOrchestrator:
         self.logger = logger or self._setup_logger()
 
         # Initialize components
-        self.progress_tracker = EvalProgressTracker(config.LOGS_DIR)
+        self.progress_tracker = EvalProgressTracker(config.LOGS_DIR, config.RESPONSES_DIR)
         self.result_writer = EvalResultWriter(config.RESPONSES_DIR)
 
         # Create evaluators for each model
@@ -77,14 +77,15 @@ class EvaluationOrchestrator:
     def _evaluate_single(
         self,
         evaluator: ModelEvaluator,
-        item: Dict[str, Any]
+        item: Dict[str, Any],
+        resume: bool = True
     ) -> Dict[str, Any]:
         """Evaluate a single item with a single model"""
         item_id = item.get("item_id", 0)
         model_id = evaluator.model_id
 
         # Skip if already completed
-        if self.progress_tracker.is_completed(item_id, model_id):
+        if resume and self.progress_tracker.is_completed(item_id, model_id):
             return None
 
         # Add delay for rate limiting
@@ -146,7 +147,7 @@ class EvaluationOrchestrator:
         # Calculate pending evaluations
         pending_count = 0
         for model_id in self.evaluators:
-            pending = self.progress_tracker.get_pending_items(items, model_id)
+            pending = self.progress_tracker.get_pending_items(items, model_id) if resume else items
             pending_count += len(pending)
             self.logger.info(f"  {model_id}: {len(pending)} pending")
 
@@ -175,7 +176,7 @@ class EvaluationOrchestrator:
                     if resume and self.progress_tracker.is_completed(item_id, model_id):
                         continue
 
-                    future = executor.submit(self._evaluate_single, evaluator, item)
+                    future = executor.submit(self._evaluate_single, evaluator, item, resume)
                     futures[future] = (item_id, model_id)
 
             # Process results as they complete

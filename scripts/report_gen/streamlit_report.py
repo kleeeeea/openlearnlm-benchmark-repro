@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPORTS_DIR = PROJECT_ROOT / "outputs" / "reports"
 RESPONSES_ROOT = PROJECT_ROOT / "outputs" / "responses"
 
@@ -209,13 +209,13 @@ def pair_response_frames(
         "baseline_reasoning",
         "experiment_reasoning",
     ]
-    if baseline.empty and experiment.empty:
+    if baseline.empty or experiment.empty:
         return pd.DataFrame(columns=columns)
 
     merged = baseline.merge(
         experiment,
         on="item_id",
-        how="outer",
+        how="inner",
         suffixes=("_baseline", "_experiment"),
     )
 
@@ -393,6 +393,16 @@ def render_question_comparison(
 ) -> None:
     st.subheader("Question-level side-by-side comparison")
     paired = pair_response_frames(baseline, experiment)
+    baseline_ids = set(baseline["item_id"].dropna()) if "item_id" in baseline else set()
+    experiment_ids = (
+        set(experiment["item_id"].dropna()) if "item_id" in experiment else set()
+    )
+    common_ids = baseline_ids & experiment_ids
+    st.caption(
+        f"Common answered items: {len(common_ids):,}. "
+        f"Baseline-only items hidden: {len(baseline_ids - experiment_ids):,}. "
+        f"Experiment-only items hidden: {len(experiment_ids - baseline_ids):,}."
+    )
     if paired.empty:
         st.warning("No paired question rows are available.")
         return
