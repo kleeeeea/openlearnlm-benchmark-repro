@@ -10,6 +10,9 @@ python-dotenv>=1.0.0
 # Data processing
 pandas>=2.0.0
 
+# Interactive reports
+streamlit>=1.36.0
+
 # Progress bars
 tqdm>=4.66.0
 

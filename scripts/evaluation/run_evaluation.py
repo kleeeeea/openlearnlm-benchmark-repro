@@ -48,14 +48,13 @@ def parse_args():
     parser.add_argument(
         "--limit",
         type=int,
-        default=2,
+        default=None,
         help="Limit number of items to evaluate"
     )
 
     parser.add_argument(
         "--resume",
         action="store_true",
-        default=True,
         help="Resume from previous progress (default: True)"
     )
 

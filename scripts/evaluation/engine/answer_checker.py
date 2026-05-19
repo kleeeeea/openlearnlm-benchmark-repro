@@ -123,9 +123,9 @@ class AnswerChecker:
             )
 
         try:
-            # Use OpenRouter API (cheaper, works with multiple models)
+            # Use the configured judge API independently from the evaluated model API.
             headers = {
-                "Authorization": f"Bearer {self.config.OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {self.config.JUDGE_API_KEY}",
                 "Content-Type": "application/json",
             }
 
@@ -137,7 +137,7 @@ class AnswerChecker:
             }
 
             response = requests.post(
-                f"{self.config.OPENROUTER_BASE_URL}/chat/completions",
+                f"{self.config.JUDGE_API_URL}/chat/completions",
                 headers=headers,
                 json=payload,
                 timeout=30
@@ -315,19 +315,19 @@ Note: The student's answer does NOT need to match the reference word-for-word.
 
         try:
             headers = {
-                "Authorization": f"Bearer {self.config.OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {self.config.JUDGE_API_KEY}",
                 "Content-Type": "application/json",
             }
 
             payload = {
-                "model": "openai/gpt-4o-mini",
+                "model": self.config.JUDGE_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.0,
                 "max_tokens": 500,
             }
 
             response = requests.post(
-                f"{self.config.OPENROUTER_BASE_URL}/chat/completions",
+                f"{self.config.JUDGE_API_URL}/chat/completions",
                 headers=headers,
                 json=payload,
                 timeout=30

@@ -48,7 +48,9 @@ class EvalConfig:
     OPENAI_BASE_URL: str = field(default_factory=lambda: os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"))
     OPENROUTER_BASE_URL: str = field(default_factory=lambda: os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
 
-    # LLM-as-Judge model (overridable via env var; must be available on OPENROUTER_BASE_URL)
+    # LLM-as-Judge API (overridable via env vars)
+    JUDGE_API_URL: str = field(default_factory=lambda: os.getenv("JUDGE_API_URL", os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")))
+    JUDGE_API_KEY: str = field(default_factory=lambda: os.getenv("JUDGE_API_KEY", os.getenv("OPENROUTER_API_KEY", "")))
     JUDGE_MODEL: str = field(default_factory=lambda: os.getenv("JUDGE_MODEL", "openai/gpt-4o-mini"))
 
     # Models to evaluate
@@ -140,6 +142,8 @@ class EvalConfig:
             print("Warning: OPENAI_API_KEY not set in environment variables")
         if not self.OPENROUTER_API_KEY:
             print("Warning: OPENROUTER_API_KEY not set in environment variables")
+        if not self.JUDGE_API_KEY:
+            print("Warning: JUDGE_API_KEY not set in environment variables")
 
     def get_model_client_type(self, model_id: str) -> str:
         """Determine which API client to use for a model"""
