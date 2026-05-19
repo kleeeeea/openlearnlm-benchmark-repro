@@ -1,0 +1,1 @@
+{"item_id": 74286, "model": "Qwen3.6-27B", "success": false, "error": "HTTP 400: Invalid host\n", "latency_ms": 437, "metadata": {"center": "Learning", "role": "Simulated Learner", "scenario": "Discovery Learning / Exploratory Questions and Hypothetical Responses", "subject": "Kindergarden / Arts", "difficulty": "Medium", "domain": "affective", "question_type": "long answer"}}

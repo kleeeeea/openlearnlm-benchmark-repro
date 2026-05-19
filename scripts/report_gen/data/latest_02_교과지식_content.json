@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-05-19 21:45:09",
+  "responses_dir": "/Users/l/klee_code/git_repos/openlearnlm-benchmark-17D4/outputs/responses/02_교과지식_content",
+  "models": {
+    "Qwen3-4B-Instruct-2507-Official": {
+      "total": 5,
+      "score": 8.0,
+      "successful": 5,
+      "failed": 0,
+      "correct": 4,
+      "accuracy": 0.8,
+      "avg_latency_ms": 128.0,
+      "total_prompt_tokens": 548,
+      "total_completion_tokens": 20
+    },
+    "Qwen3-4B-Instruct-2507": {
+      "total": 5,
+      "score": 8.0,
+      "successful": 5,
+      "failed": 0,
+      "correct": 4,
+      "accuracy": 0.8,
+      "avg_latency_ms": 5202.4,
+      "total_prompt_tokens": 548,
+      "total_completion_tokens": 7211
+    }
+  }
+}

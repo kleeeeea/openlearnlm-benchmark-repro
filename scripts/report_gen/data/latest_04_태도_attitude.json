@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-05-19 21:45:09",
+  "responses_dir": "/Users/l/klee_code/git_repos/openlearnlm-benchmark-17D4/outputs/responses/04_태도_attitude",
+  "models": {
+    "Qwen3-4B-Instruct-2507-Official": {
+      "total": 5,
+      "score": 5.2,
+      "successful": 5,
+      "failed": 0,
+      "correct": 3,
+      "accuracy": 0.6,
+      "avg_latency_ms": 2556.0,
+      "total_prompt_tokens": 657,
+      "total_completion_tokens": 3344
+    },
+    "Qwen3-4B-Instruct-2507": {
+      "total": 4,
+      "score": 6.5,
+      "successful": 4,
+      "failed": 0,
+      "correct": 3,
+      "accuracy": 0.75,
+      "avg_latency_ms": 4392.2,
+      "total_prompt_tokens": 534,
+      "total_completion_tokens": 4864
+    }
+  }
+}

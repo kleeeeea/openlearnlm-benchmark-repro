@@ -133,7 +133,7 @@ class AnswerChecker:
                 "model": self.config.JUDGE_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.0,
-                "max_tokens": 300,
+                "max_tokens": 3000,
             }
 
             response = requests.post(
@@ -166,6 +166,7 @@ class AnswerChecker:
 
                 return is_correct, score, f"[{band}] {reasoning}", rubric_source
             else:
+                raise Exception("git_repos/openlearnlm-benchmark-17D4/scripts/evaluation/engine/answer_checker.py:169")
                 # Fallback to word overlap on API error
                 is_correct, score, reasoning = self._fallback_word_overlap(
                     model_answer, expected_answer
@@ -173,11 +174,12 @@ class AnswerChecker:
                 return is_correct, score, reasoning, "generic"
 
         except (json.JSONDecodeError, KeyError, Exception) as e:
+            raise Exception(f"Error git_repos/openlearnlm-benchmark-17D4/scripts/evaluation/engine/answer_checker.py:177 {e}")
             # Fallback to word overlap on parse error
-            is_correct, score, reasoning = self._fallback_word_overlap(
-                model_answer, expected_answer
-            )
-            return is_correct, score, reasoning, "generic"
+            # is_correct, score, reasoning = self._fallback_word_overlap(
+            #     model_answer, expected_answer
+            # )
+            # return is_correct, score, reasoning, "generic"
 
     def _build_rubric_prompt(
         self,
@@ -205,6 +207,7 @@ class AnswerChecker:
 1. Carefully compare the student's answer against the rubric criteria
 2. Assign a score from 1-10 based on the rubric bands
 3. The student's answer does NOT need to match the reference word-for-word
+4. Don't reason for over 100 tokens. 
 
 ## Response Format (JSON only)
 {{"score": <1-10>, "band": "<e.g., 7-8>", "reasoning": "<brief explanation based on rubric>"}}
@@ -323,7 +326,7 @@ Note: The student's answer does NOT need to match the reference word-for-word.
                 "model": self.config.JUDGE_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.0,
-                "max_tokens": 500,
+                "max_tokens": 3000,
             }
 
             response = requests.post(
@@ -394,6 +397,8 @@ Evaluation Dimension: {dimension}
 2. Evaluate based on the specific evaluation question and rubric
 3. Assign a score from 1-10 based on the rubric bands
 4. Provide brief reasoning for your score
+5. Don't reason for over 100 tokens. 
+
 
 ## Response Format (JSON only)
 {{"score": <1-10>, "band": "<e.g., 7-8>", "reasoning": "<brief explanation based on rubric>"}}

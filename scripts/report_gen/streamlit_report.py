@@ -3,34 +3,68 @@
 from __future__ import annotations
 
 import json
+import unicodedata
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import streamlit as st
 
+from evaluation.config import EvalConfig
+from report_gen.regenerate_report import LATEST_JSON
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORTS_DIR = PROJECT_ROOT / "outputs" / "reports"
 RESPONSES_ROOT = PROJECT_ROOT / "outputs" / "responses"
 
-DEFAULT_EXPERIMENT_MODEL_REPORT_FILE = (
-    REPORTS_DIR / "report_20260518_222155.json"
-)
+DEFAULT_OVERALL_REPORT_FILE = LATEST_JSON
+REPORT_DATA_DIR = DEFAULT_OVERALL_REPORT_FILE.parent
 
-DEFAULT_EXPERIMENT_GROUP_RESPONSE_FILE = (
-    RESPONSES_ROOT / "01_기능_skills" / "Qwen3-4B-Instruct-2507.jsonl"
-)
-
-DEFAULT_BASELINE_GROUP_RESPONSE_FILE = (
-    RESPONSES_ROOT / "01_기능_skills" / "Qwen3-4B-Instruct-2507-Official.jsonl"
+EXPERIMENT_MODEL = "Qwen3-4B-Instruct-2507"
+BASELINE_MODEL = "Qwen3-4B-Instruct-2507-Official"
+CATEGORY_CHOICES = list(
+    EvalConfig.__dataclass_fields__["_CATEGORY_FOLDER"].default_factory().keys()
 )
 
 
-def find_latest_report() -> Path | None:
-    reports = sorted(REPORTS_DIR.glob("report_*.json"))
-    return reports[-1] if reports else None
+def normalize_name(value: str) -> str:
+    return unicodedata.normalize("NFC", value)
 
+
+def response_dir_for_category(category: str) -> Path:
+    if RESPONSES_ROOT.exists():
+        target = normalize_name(category)
+        for path in RESPONSES_ROOT.iterdir():
+            if path.is_dir() and normalize_name(path.name) == target:
+                return path
+    return RESPONSES_ROOT / category
+
+
+def response_file_for_category(category: str, model: str) -> Path:
+    return response_dir_for_category(category) / f"{model}.jsonl"
+
+
+def report_file_for_category(category: str) -> Path:
+    file_name = f"latest_{category}.json"
+    target = normalize_name(file_name)
+    if REPORT_DATA_DIR.exists():
+        for path in REPORT_DATA_DIR.glob("latest_*.json"):
+            if normalize_name(path.name) == target:
+                return path
+    return REPORT_DATA_DIR / file_name
+
+
+def category_report_files() -> dict[str, Path]:
+    return {category: report_file_for_category(category) for category in CATEGORY_CHOICES}
+
+
+def category_response_files() -> dict[str, dict[str, Path]]:
+    return {
+        category: {
+            "baseline": response_file_for_category(category, BASELINE_MODEL),
+            "experiment": response_file_for_category(category, EXPERIMENT_MODEL),
+        }
+        for category in CATEGORY_CHOICES
+    }
 
 def list_response_files() -> list[Path]:
     return sorted(RESPONSES_ROOT.glob("*/*.jsonl"))
@@ -188,6 +222,38 @@ def comparison_summary_frame(
     return pd.concat([summary, pd.DataFrame.from_records(deltas)], axis=1)
 
 
+def category_summary_frame(
+    category_frames: dict[str, tuple[pd.DataFrame, pd.DataFrame]]
+) -> pd.DataFrame:
+    records = []
+    for category, (baseline, experiment) in category_frames.items():
+        baseline_summary = summarize_response_frame("baseline", baseline)
+        experiment_summary = summarize_response_frame("experiment", experiment)
+        paired = pair_response_frames(baseline, experiment)
+        records.append(
+            {
+                "category": category,
+                "baseline_model": baseline_summary["model"],
+                "experiment_model": experiment_summary["model"],
+                "baseline_total": baseline_summary["total"],
+                "experiment_total": experiment_summary["total"],
+                "paired_total": len(paired),
+                "baseline_score": baseline_summary["score"],
+                "experiment_score": experiment_summary["score"],
+                "score_delta": experiment_summary["score"] - baseline_summary["score"],
+                "baseline_accuracy": baseline_summary["accuracy"],
+                "experiment_accuracy": experiment_summary["accuracy"],
+                "accuracy_delta": experiment_summary["accuracy"]
+                - baseline_summary["accuracy"],
+                "baseline_latency_ms": baseline_summary["avg_latency_ms"],
+                "experiment_latency_ms": experiment_summary["avg_latency_ms"],
+                "latency_delta_ms": experiment_summary["avg_latency_ms"]
+                - baseline_summary["avg_latency_ms"],
+            }
+        )
+    return pd.DataFrame.from_records(records)
+
+
 def pair_response_frames(
     baseline: pd.DataFrame, experiment: pd.DataFrame
 ) -> pd.DataFrame:
@@ -317,6 +383,52 @@ def render_performance(summary: pd.DataFrame) -> None:
             "score": st.column_config.NumberColumn("score", format="%.2f"),
             "avg_latency_ms": st.column_config.NumberColumn(
                 "avg_latency_ms", format="%.0f"
+            ),
+        },
+    )
+
+
+def render_category_summary(summary: pd.DataFrame) -> None:
+    st.subheader("Category subsets")
+    if summary.empty:
+        st.warning("No category response files are available.")
+        return
+
+    chart_data = summary.set_index("category")[
+        ["baseline_score", "experiment_score", "score_delta"]
+    ]
+    st.bar_chart(chart_data, height=260)
+    st.dataframe(
+        summary,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "baseline_score": st.column_config.NumberColumn(
+                "baseline_score", format="%.2f"
+            ),
+            "experiment_score": st.column_config.NumberColumn(
+                "experiment_score", format="%.2f"
+            ),
+            "score_delta": st.column_config.NumberColumn(
+                "score_delta", format="%+.2f"
+            ),
+            "baseline_accuracy": st.column_config.NumberColumn(
+                "baseline_accuracy", format="%.3f"
+            ),
+            "experiment_accuracy": st.column_config.NumberColumn(
+                "experiment_accuracy", format="%.3f"
+            ),
+            "accuracy_delta": st.column_config.NumberColumn(
+                "accuracy_delta", format="%+.3f"
+            ),
+            "baseline_latency_ms": st.column_config.NumberColumn(
+                "baseline_latency_ms", format="%.0f"
+            ),
+            "experiment_latency_ms": st.column_config.NumberColumn(
+                "experiment_latency_ms", format="%.0f"
+            ),
+            "latency_delta_ms": st.column_config.NumberColumn(
+                "latency_delta_ms", format="%+.0f"
             ),
         },
     )
@@ -508,17 +620,20 @@ def render_question_comparison(
         return
 
     selected_label = st.selectbox("Select a paired item", labels)
-    selected_item_id = int(selected_label.split(" | ", 1)[0].replace("item ", ""))
-    baseline_by_item = {row.get("item_id"): row for row in baseline_rows}
-    experiment_by_item = {row.get("item_id"): row for row in experiment_rows}
+    selected_item_id = selected_label.split(" | ", 1)[0].replace("item ", "")
+    baseline_by_item = {str(row.get("item_id")): row for row in baseline_rows}
+    experiment_by_item = {str(row.get("item_id")): row for row in experiment_rows}
     baseline_item = baseline_by_item.get(selected_item_id, {})
     experiment_item = experiment_by_item.get(selected_item_id, {})
+    selected_question = filtered[filtered["item_id"].astype(str) == selected_item_id][
+        "question"
+    ].iloc[0]
 
     st.markdown("**Question**")
     st.write(
         experiment_item.get("question")
         or baseline_item.get("question")
-        or filtered[filtered["item_id"] == selected_item_id]["question"].iloc[0]
+        or selected_question
     )
 
     baseline_col, experiment_col = st.columns(2)
@@ -683,69 +798,82 @@ def main() -> None:
     st.title("OpenLearnLM Benchmark Report")
 
     response_files = list_response_files()
-    latest_report = find_latest_report()
-    default_report = (
-        DEFAULT_EXPERIMENT_MODEL_REPORT_FILE
-        if DEFAULT_EXPERIMENT_MODEL_REPORT_FILE.exists()
-        else latest_report
-    )
-    default_experiment_response = (
-        DEFAULT_EXPERIMENT_GROUP_RESPONSE_FILE
-        if DEFAULT_EXPERIMENT_GROUP_RESPONSE_FILE.exists()
-        else (response_files[0] if response_files else None)
-    )
-    default_baseline_response = (
-        DEFAULT_BASELINE_GROUP_RESPONSE_FILE
-        if DEFAULT_BASELINE_GROUP_RESPONSE_FILE.exists()
-        else (response_files[0] if response_files else None)
-    )
+    category_files = category_response_files()
+    category_reports = category_report_files()
 
     with st.sidebar:
         st.header("Data sources")
-        report_options = sorted(REPORTS_DIR.glob("report_*.json"))
-        if not report_options:
-            st.error(f"No report JSON files found under {REPORTS_DIR}")
-            st.stop()
-        report_path = st.selectbox(
-            "Overall report",
-            report_options,
-            index=report_options.index(default_report) if default_report in report_options else 0,
-            format_func=lambda path: path.name,
-        )
-
         if not response_files:
             st.error(f"No response JSONL files found under {RESPONSES_ROOT}")
             st.stop()
-        experiment_response_path = st.selectbox(
-            "Experiment responses",
-            response_files,
-            index=response_files.index(default_experiment_response)
-            if default_experiment_response in response_files
-            else 0,
-            format_func=lambda path: f"{path.parent.name}/{path.name}",
+        selected_category = st.selectbox(
+            "Category subset",
+            CATEGORY_CHOICES,
+            format_func=lambda category: category.replace("_", " "),
         )
-        baseline_response_path = st.selectbox(
-            "Baseline responses",
-            response_files,
-            index=response_files.index(default_baseline_response)
-            if default_baseline_response in response_files
-            else 0,
-            format_func=lambda path: f"{path.parent.name}/{path.name}",
-        )
+        selected_report_file = category_reports[selected_category]
+        if not selected_report_file.exists():
+            st.error(f"Category report not found: {selected_report_file}")
+            st.stop()
+        st.caption(f"Overall report: {selected_report_file.name}")
 
-    report = load_report(str(report_path))
-    experiment_rows = load_responses(str(experiment_response_path))
-    baseline_rows = load_responses(str(baseline_response_path))
-    summary = model_summary_frame(report)
-    experiment_responses = response_frame(experiment_rows)
-    baseline_responses = response_frame(baseline_rows)
+        selected_files = category_files[selected_category]
+        st.caption(f"Baseline: {selected_files['baseline'].name}")
+        st.caption(f"Experiment: {selected_files['experiment'].name}")
+
+        missing_reports = [
+            path for path in category_reports.values() if not path.exists()
+        ]
+        if missing_reports:
+            with st.expander("Missing category report files", expanded=False):
+                for path in missing_reports:
+                    st.write(str(path.relative_to(PROJECT_ROOT)))
+
+        missing_files = [
+            path
+            for files in category_files.values()
+            for path in files.values()
+            if not path.exists()
+        ]
+        if missing_files:
+            with st.expander("Missing fixed response files", expanded=False):
+                for path in missing_files:
+                    st.write(str(path.relative_to(PROJECT_ROOT)))
+
+    report = load_report(str(selected_report_file))
+    overall_summary = model_summary_frame(report)
+
+    category_rows: dict[str, tuple[list[dict[str, Any]], list[dict[str, Any]]]] = {}
+    category_frames: dict[str, tuple[pd.DataFrame, pd.DataFrame]] = {}
+    for category, files in category_files.items():
+        baseline_rows = (
+            load_responses(str(files["baseline"])) if files["baseline"].exists() else []
+        )
+        experiment_rows = (
+            load_responses(str(files["experiment"]))
+            if files["experiment"].exists()
+            else []
+        )
+        baseline_responses = response_frame(baseline_rows)
+        experiment_responses = response_frame(experiment_rows)
+        category_rows[category] = (baseline_rows, experiment_rows)
+        category_frames[category] = (baseline_responses, experiment_responses)
+
+    baseline_rows, experiment_rows = category_rows[selected_category]
+    baseline_responses, experiment_responses = category_frames[selected_category]
+    selected_files = category_files[selected_category]
 
     st.caption(
         f"Generated at {report.get('generated_at', 'unknown')} | "
-        f"Report: {report_path.name} | "
-        f"Baseline: {baseline_response_path.name} | "
-        f"Experiment: {experiment_response_path.name}"
+        f"Overall: {selected_report_file.name} | "
+        f"Subset: {selected_category} | "
+        f"Baseline: {selected_files['baseline'].name} | "
+        f"Experiment: {selected_files['experiment'].name}"
     )
+    render_performance(overall_summary)
+    render_category_summary(category_summary_frame(category_frames))
+    st.divider()
+    st.subheader(f"Selected subset: {selected_category}")
     render_overall_comparison(baseline_responses, experiment_responses)
     render_question_comparison(
         baseline_rows,
@@ -753,10 +881,9 @@ def main() -> None:
         baseline_responses,
         experiment_responses,
     )
-    render_performance(summary)
 
     with st.expander("Single-file experiment detail", expanded=False):
-        render_metric_row(summary, experiment_responses)
+        render_metric_row(overall_summary, experiment_responses)
         filtered = render_response_table(experiment_responses)
         render_detail(experiment_rows, filtered)
 

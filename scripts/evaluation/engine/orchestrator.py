@@ -100,17 +100,6 @@ class EvaluationOrchestrator:
                 f"FAILED: {model_id} | item_id={item_id} | error={result.get('error', 'Unknown')}"
             )
 
-        # Record progress
-        is_correct = result.get("is_correct", False)
-        self.progress_tracker.mark_completed(item_id, model_id, is_correct)
-
-        # Write result
-        self.result_writer.write_result(result)
-
-        # Update counter
-        with self._counter_lock:
-            self._processed_count += 1
-
         return result
 
     def run(
@@ -187,6 +176,18 @@ class EvaluationOrchestrator:
                 try:
                     result = future.result()
                     completed += 1
+
+                    if result is not None:
+                        # Persist results from the main thread as futures complete.
+                        self.result_writer.write_result(result)
+                        self.progress_tracker.mark_completed(
+                            item_id,
+                            model_id,
+                            result.get("is_correct", False),
+                        )
+
+                        with self._counter_lock:
+                            self._processed_count += 1
 
                     # Progress logging
                     if completed % 100 == 0 or completed == len(futures):

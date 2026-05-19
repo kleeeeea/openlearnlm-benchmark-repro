@@ -30,70 +30,78 @@ from evaluation.config import EvalConfig
 from evaluation.engine.orchestrator import EvaluationOrchestrator
 from evaluation.results.report_generator import ReportGenerator
 
+CATEGORY_CHOICES = [
+    "01_기능_skills",
+    "02_교과지식_content",
+    "03_교육학지식_pedagogical",
+    "04_태도_attitude"
+]
+
 
 def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="OpenLearnLM Benchmark Evaluation",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__
+            description="OpenLearnLM Benchmark Evaluation",
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog=__doc__
     )
 
     parser.add_argument(
-        "--pilot",
-        action="store_true",
-        help="Run pilot test with limited items"
+            "--pilot",
+            action="store_true",
+            help="Run pilot test with limited items"
     )
 
     parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="Limit number of items to evaluate"
+            "--limit",
+            type=int,
+            default=None,
+            help="Limit number of items to evaluate"
     )
 
     parser.add_argument(
-        "--resume",
-        action="store_true",
-        help="Resume from previous progress (default: True)"
+            "--resume",
+            action="store_true",
+            help="Resume from previous progress (default: True)"
     )
 
     parser.add_argument(
-        "--no-resume",
-        action="store_true",
-        help="Start fresh, ignore previous progress"
+            "--no-resume",
+            action="store_true",
+            help="Start fresh, ignore previous progress"
     )
 
     parser.add_argument(
-        "--report-only",
-        action="store_true",
-        help="Generate report from existing results without running evaluation"
+            "--report-only",
+            action="store_true",
+            help="Generate report from existing results without running evaluation"
     )
 
     parser.add_argument(
-        "--models",
-        nargs="+",
-        help="Specific models to evaluate (space-separated)"
+            "--generate-report",
+            action="store_true",
+            help="Generate report after evaluation (default: skip)"
     )
 
     parser.add_argument(
-        "--workers",
-        type=int,
-        default=5,
-        help="Workers per model (default: 5)"
+            "--models",
+            nargs="+",
+            help="Specific models to evaluate (space-separated)"
     )
 
     parser.add_argument(
-        "--category",
-        type=str,
-        default="01_기능_skills",
-        choices=[
-            "01_기능_skills",
-            "02_교과지식_content",
-            "03_교육학지식_pedagogical",
-            "04_태도_attitude"
-        ],
-        help="Benchmark category to evaluate (default: 01_기능_skills)"
+            "--workers",
+            type=int,
+            default=5,
+            help="Workers per model (default: 5)"
+    )
+
+    parser.add_argument(
+            "--category",
+            type=str,
+            default="01_기능_skills",
+            choices=CATEGORY_CHOICES,
+            help="Benchmark category to evaluate (default: 01_기능_skills)"
     )
 
     return parser.parse_args()
@@ -185,13 +193,15 @@ def main():
     try:
         summary = orchestrator.run(items, resume=resume)
 
-        # Generate report
-        print("\nGenerating final report...")
-        generator = ReportGenerator(config.RESPONSES_DIR, config.REPORTS_DIR)
-        result = generator.generate_report()
+        if args.generate_report:
+            print("\nGenerating final report...")
+            generator = ReportGenerator(config.RESPONSES_DIR, config.REPORTS_DIR)
+            result = generator.generate_report()
 
-        if "markdown_report" in result:
-            print(f"\nReport saved to: {result['markdown_report']}")
+            if "markdown_report" in result:
+                print(f"\nReport saved to: {result['markdown_report']}")
+        else:
+            print("\nSkipping report generation. Use --generate-report or --report-only to create reports.")
 
         print("\nEvaluation completed successfully!")
         return 0
