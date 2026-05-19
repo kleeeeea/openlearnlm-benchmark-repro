@@ -61,6 +61,7 @@ Qwen27b_API = ApiConfig(
 )
 
 GLM51FP8_API = ApiConfig(
+    # https://qz.sii.edu.cn/jobs/modelDeplayDetail/sv-d46fd98b-a669-4acb-92b6-85966acbf383?spaceId=ws-33f55cbb-1e6b-4b37-b69d-3b52568e0a61
     base_url="https://pce5pjhmkeejckomjamehdjeekom5bhb.openapi-qb.sii.edu.cn/v1",
     api_key="QF8XqjmZhi9sygq1MT9Nr0rk8xZzVlid/aLvCRurzWw=",
     model="GLM-5.1-FP8",
